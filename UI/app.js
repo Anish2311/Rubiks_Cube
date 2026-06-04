@@ -1,8 +1,8 @@
 let n = 3
-let v = 2
+let v = 0
 let animating = false
 let totAngle = 0
-let ActualKey
+let ActualKey = '1'
 let fc
 let magYZ
 let magXY
@@ -10,8 +10,10 @@ let magXZ
 let angYZ
 let angXY
 let angXZ
+let reverse = 1
+let released = false
 cube = []
-let incr = 0.071
+let incr = 0.5
 
 function setup(){
     createCanvas(window.innerWidth,window.innerHeight,WEBGL)
@@ -42,40 +44,50 @@ class Cube{
         this.magYZ = Math.sqrt(this.y**2 + this.z**2)
         this.magXY = Math.sqrt(this.y**2 + this.x**2)
         this.magXZ = Math.sqrt(this.x**2 + this.z**2)
-        this.angYZ = Math.atan(this.z/this.y)
-        this.angXY = Math.atan(this.y/this.x)
-        this.angXZ = Math.atan(this.x/this.z)
+        this.angYZ = Math.atan(this.y/this.z)
+        this.angXY = Math.atan(this.x/this.y)
+        this.angXZ = Math.atan(this.z/this.x)
         if (this.magXY == 0)this.angXY = 0;
         if (this.magXZ == 0)this.angXZ = 0;
         if (this.magYZ == 0)this.angYZ = 0;
-        if(this.y < 0)this.angYZ += PI;
-        if(this.x < 0)this.angXY += PI;
-        if(this.z < 0)this.angXZ += PI;
+        if(this.z < 0)this.angYZ += PI;
+        else if(this.y < 0)this.angYZ += 2*PI
+        if(this.y < 0)this.angXY += PI;
+        else if(this.x < 0)this.angXY += 2*PI
+        if(this.x < 0)this.angXZ += PI;
+        else if(this.z < 0)this.angXZ += 2*PI
+        this.col = (random()*255,random()*255,random()*255)
         
         
     }
     show(){
-        if (this.typ == 2){
-            fill(255,0,0)
-        }
-        else if (this.typ == 1){
-            fill(0,255,0)
-        }
-        else{
-            fill(0,0,255)
-        }
+        fill(this.col)
         push()
         translate(this.x,this.y,this.z)
         if(animating){
-            if(v == 0 && this.i == parseInt(ActualKey))rotateX((fc - frameCount)*-incr);
-            if(v == 1 && this.j == parseInt(ActualKey))rotateY((fc - frameCount)*incr);
-            if(v == 2 && this.k == parseInt(ActualKey))rotateZ((fc - frameCount)*-incr);
+            if(v == 0 && this.i == parseInt(ActualKey))rotateX((frameCount - fc)*-incr*reverse);
+            if(v == 1 && this.j == parseInt(ActualKey))rotateY((frameCount - fc)*-incr*reverse);
+            if(v == 2 && this.k == parseInt(ActualKey))rotateZ((frameCount - fc)*-incr*reverse);
         }
         box(this.len,this.len,this.len)
         pop()
     }
-    rotating(v,num){
-        
+    update(){
+        this.magYZ = Math.sqrt(this.y**2 + this.z**2)
+        this.magXY = Math.sqrt(this.y**2 + this.x**2)
+        this.magXZ = Math.sqrt(this.x**2 + this.z**2)
+        this.angYZ = Math.atan(this.y/this.z)
+        this.angXY = Math.atan(this.x/this.y)
+        this.angXZ = Math.atan(this.z/this.x)
+        if (this.magXY == 0)this.angXY = 0;
+        if (this.magXZ == 0)this.angXZ = 0;
+        if (this.magYZ == 0)this.angYZ = 0;
+        if(this.z < 0)this.angYZ += PI;
+        else if(this.y < 0)this.angYZ += 2*PI
+        if(this.y < 0)this.angXY += PI;
+        else if(this.x < 0)this.angXY += 2*PI
+        if(this.x < 0)this.angXZ += PI;
+        else if(this.z < 0)this.angXZ += 2*PI
     }
 }
 
@@ -83,30 +95,39 @@ function animate(v,num){
     let flag = false
     cube.forEach(e => {
         if( animating && ((v == 0 && e.i == parseInt(num)) || (v == 1 && e.j == parseInt(num)) || (v == 2 && e.k == parseInt(num)))){
-            let x = 0
-            let y = 0
-            let z = 0
-            if(v == 0)x=(parseInt(num) - n/2 + 0.5)*e.len
-            else if(v == 1) y = (parseInt(num) - n/2 + 0.5)*e.len
-            else if(v == 2) z = (parseInt(num) - n/2 + 0.5)*e.len
+            
             // push()
             // translate(e.x,e.y,e.z)
-            if(v == 0){e.y = e.magYZ * sin(e.angYZ + (fc - frameCount)*incr);e.z = e.magYZ * cos(e.angYZ + (fc - frameCount)*incr);
+            if(v == 0){e.y = e.magYZ * sin(e.angYZ + reverse * (frameCount - fc)*incr);e.z = e.magYZ * cos(e.angYZ + reverse * (frameCount - fc)*incr);
             }
-            else if(v == 1) {e.x = e.magXZ * sin(e.angXZ + (fc - frameCount)*incr);e.z = e.magXZ * cos(e.angXZ + (fc - frameCount)*incr);}
-            else if(v == 2) {e.x = e.magXY * sin(e.angXY + (fc - frameCount)*incr);e.y = e.magXY * cos(e.angXY + (fc - frameCount)*incr);}
+            else if(v == 1) {e.x = e.magXZ * cos(e.angXZ + reverse * (frameCount - fc)*incr);e.z = e.magXZ * sin(e.angXZ + reverse * (frameCount - fc)*incr);}
+            else if(v == 2) {e.x = e.magXY * sin(e.angXY + reverse * (frameCount - fc)*incr);e.y = e.magXY * cos(e.angXY + reverse * (frameCount - fc)*incr);}
             
             // pop()
             if((frameCount - fc)*incr >= HALF_PI){
                 flag = true
-                if(v == 0){e.y = e.magYZ * sin((e.angYZ + HALF_PI));e.z = e.magYZ * cos((e.angYZ + HALF_PI));console.log(e.magYZ,e.angYZ);
-                }
-                else if(v == 1) {e.x = e.magXZ * sin((e.angXZ + HALF_PI));e.z = e.magXZ * cos((e.angXZ + HALF_PI));}
-                else if(v == 2) {e.x = e.magXY * sin((e.angXY + HALF_PI));e.y = e.magXY * cos((e.angXY + HALF_PI));}
-            }
+                if(v == 0){e.y = e.magYZ * sin((e.angYZ + reverse * HALF_PI));e.z = e.magYZ * cos((e.angYZ + reverse * HALF_PI))}
+                else if(v == 1) {e.x = e.magXZ * cos((e.angXZ + reverse * HALF_PI));e.z = e.magXZ * sin((e.angXZ + reverse * HALF_PI));}
+                else if(v == 2) {e.x = e.magXY * sin((e.angXY + reverse * HALF_PI));e.y = e.magXY * cos((e.angXY + reverse * HALF_PI));}
+            }1
         }
     });
-    if(flag){fc = 0;animating = false}
+    if(flag){fc = 0;animating = false;
+        cube.forEach(e => {
+            // console.log(e.x,e.y,e.z);
+            
+            if(((v == 0 && e.i == parseInt(num)) || (v == 1 && e.j == parseInt(num)) || (v == 2 && e.k == parseInt(num)))){
+                console.log(e.x,e.y,e.z);
+                
+                // console.log(e.i,e.j,e.k,'BEFORE');
+                e.j = Math.round(Math.abs(e.y/e.len + (n-1)/2))
+                e.i = Math.round(Math.abs(e.x/e.len + (n-1)/2))
+                e.k = Math.round(Math.abs(e.z/e.len + (n-1)/2))
+                // console.log(e.i,e.j,e.k,'AFTER');
+                e.update()
+            }
+        }); 
+    }   
 }
 
 function draw(){
@@ -116,6 +137,20 @@ function draw(){
         
         animate(v,ActualKey)
     }
+    else{
+        v = Math.round(random()*2)
+        ActualKey = JSON.stringify(Math.round(random()*(n-1)))
+        let vlu = random() - 0.5
+        reverse = vlu/Math.abs(vlu)
+        fc = frameCount
+        console.log('yeee',v,ActualKey,reverse);    
+        
+        animating = true
+        // if(released){
+        //     released = false
+        //     reverse = 1
+        // }
+    }
     cube.forEach(e => {
         e.show()
     });
@@ -123,13 +158,21 @@ function draw(){
     orbitControl();
 }
 
-function keyPressed(){
-    if('1234567890'.includes(key)){
-        if (animating == false){
-            console.log('mhmm');
-            animating = true
-            ActualKey = key
-            fc = frameCount
-        }
-    }
+// function keyPressed(){
+//     if(key == 'r' && animating == false)reverse = -1;
+//     if(key == 'w' && animating == false)v = 1;
+//     if(key == 'a' && animating == false)v = 0;
+//     if(key == 's' && animating == false)v = 2;
+//     if('1234567890'.includes(key)){
+//         if (animating == false){
+//             console.log('mhmm');
+//             animating = true
+//             ActualKey = key
+//             fc = frameCount
+//         }
+//     }
+// }
+
+function keyReleased(){
+    noLoop()
 }
