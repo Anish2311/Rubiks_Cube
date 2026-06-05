@@ -13,7 +13,9 @@ let angXZ
 let reverse = 1
 let released = false
 cube = []
-let incr = 0.1
+let incr = 0.01
+let increment = 0
+let incrAcc = 0.1
 
 function setup(){
     createCanvas(window.innerWidth,window.innerHeight,WEBGL)
@@ -67,7 +69,6 @@ class Cube{
         if(this.k == n-1)this.colours['red'] = [0,0,1]
     }
     show(){
-        fill(this.col)
         Object.keys(this.colours).forEach(e => {
             let x = 1.05
             let y = 1.05
@@ -81,20 +82,22 @@ class Cube{
             fill(e)
             translate(this.x,this.y,this.z)
             if(animating){
-                if(v == 0 && this.i == parseInt(ActualKey))rotateX((frameCount - fc)*-incr*reverse);
-                if(v == 1 && this.j == parseInt(ActualKey))rotateY((frameCount - fc)*-incr*reverse);
-                if(v == 2 && this.k == parseInt(ActualKey))rotateZ((frameCount - fc)*-incr*reverse);
+                if(v == 0 && this.i == parseInt(ActualKey))rotateX(totAngle*-1*reverse);
+                if(v == 1 && this.j == parseInt(ActualKey))rotateY(totAngle*-1*reverse);
+                if(v == 2 && this.k == parseInt(ActualKey))rotateZ(totAngle*-1*reverse);
             }
             // pop()
             box(this.len*x,this.len*y,this.len*z)
             pop()
         });
         push()
+        fill(this.col)
+        noStroke()
         translate(this.x,this.y,this.z)
         if(animating){
-            if(v == 0 && this.i == parseInt(ActualKey))rotateX((frameCount - fc)*-incr*reverse);
-            if(v == 1 && this.j == parseInt(ActualKey))rotateY((frameCount - fc)*-incr*reverse);
-            if(v == 2 && this.k == parseInt(ActualKey))rotateZ((frameCount - fc)*-incr*reverse);
+            if(v == 0 && this.i == parseInt(ActualKey))rotateX(totAngle*-1*reverse);
+            if(v == 1 && this.j == parseInt(ActualKey))rotateY(totAngle*-1*reverse);
+            if(v == 2 && this.k == parseInt(ActualKey))rotateZ(totAngle*-1*reverse);
         }
         box(this.len,this.len,this.len)
         pop()
@@ -142,20 +145,23 @@ function animate(v,num){
             
             // push()
             // translate(e.x,e.y,e.z)
-            if(v == 0){e.y = e.magYZ * sin(e.angYZ + reverse * (frameCount - fc)*incr);e.z = e.magYZ * cos(e.angYZ + reverse * (frameCount - fc)*incr);
+            if(v == 0){e.y = e.magYZ * sin(e.angYZ + reverse * totAngle);e.z = e.magYZ * cos(e.angYZ + reverse * totAngle);
             }
-            else if(v == 1) {e.x = e.magXZ * cos(e.angXZ + reverse * (frameCount - fc)*incr);e.z = e.magXZ * sin(e.angXZ + reverse * (frameCount - fc)*incr);}
-            else if(v == 2) {e.x = e.magXY * sin(e.angXY + reverse * (frameCount - fc)*incr);e.y = e.magXY * cos(e.angXY + reverse * (frameCount - fc)*incr);}
+            else if(v == 1) {e.x = e.magXZ * cos(e.angXZ + reverse * totAngle);e.z = e.magXZ * sin(e.angXZ + reverse * totAngle);}
+            else if(v == 2) {e.x = e.magXY * sin(e.angXY + reverse * totAngle);e.y = e.magXY * cos(e.angXY + reverse * totAngle);}
             
             // pop()
-            if((frameCount - fc)*incr >= HALF_PI){
+            if(totAngle >= (HALF_PI)){
                 flag = true
                 if(v == 0){e.y = e.magYZ * sin((e.angYZ + reverse * HALF_PI));e.z = e.magYZ * cos((e.angYZ + reverse * HALF_PI))}
                 else if(v == 1) {e.x = e.magXZ * cos((e.angXZ + reverse * HALF_PI));e.z = e.magXZ * sin((e.angXZ + reverse * HALF_PI));}
                 else if(v == 2) {e.x = e.magXY * sin((e.angXY + reverse * HALF_PI));e.y = e.magXY * cos((e.angXY + reverse * HALF_PI));}
-            }1
+            }
+            else if (totAngle >= HALF_PI/2){incrAcc = -0.1;}
         }
     });
+    increment += incrAcc
+    totAngle += increment
     if(flag){fc = 0;animating = false;
         cube.forEach(e => {
             // console.log(e.x,e.y,e.z);
@@ -171,6 +177,8 @@ function animate(v,num){
                 e.update()
             }
         }); 
+        incrAcc = 0.1
+        totAngle = 0
     }   
 }
 
