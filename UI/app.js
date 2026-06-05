@@ -15,7 +15,7 @@ let released = false
 cube = []
 let incr = 0.01
 let increment = 0
-let incrAcc = 0.1
+let incrAcc = 0.03
 
 function setup(){
     createCanvas(window.innerWidth,window.innerHeight,WEBGL)
@@ -151,13 +151,13 @@ function animate(v,num){
             else if(v == 2) {e.x = e.magXY * sin(e.angXY + reverse * totAngle);e.y = e.magXY * cos(e.angXY + reverse * totAngle);}
             
             // pop()
-            if(totAngle >= (HALF_PI)){
+            if(totAngle >= (HALF_PI - 0.11)){
                 flag = true
                 if(v == 0){e.y = e.magYZ * sin((e.angYZ + reverse * HALF_PI));e.z = e.magYZ * cos((e.angYZ + reverse * HALF_PI))}
                 else if(v == 1) {e.x = e.magXZ * cos((e.angXZ + reverse * HALF_PI));e.z = e.magXZ * sin((e.angXZ + reverse * HALF_PI));}
                 else if(v == 2) {e.x = e.magXY * sin((e.angXY + reverse * HALF_PI));e.y = e.magXY * cos((e.angXY + reverse * HALF_PI));}
             }
-            else if (totAngle >= HALF_PI/2){incrAcc = -0.1;}
+            else if (totAngle >= HALF_PI/2){incrAcc = -0.03;}
         }
     });
     increment += incrAcc
@@ -177,7 +177,7 @@ function animate(v,num){
                 e.update()
             }
         }); 
-        incrAcc = 0.1
+        incrAcc = 0.03
         totAngle = 0
     }   
 }
