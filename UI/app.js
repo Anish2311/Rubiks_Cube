@@ -2,7 +2,7 @@ let n = 3
 let v = 0
 let animating = false
 let totAngle = 0
-let ActualKey = '1'
+let ActualKey
 let fc
 let magYZ
 let magXY
@@ -13,7 +13,7 @@ let angXZ
 let reverse = 1
 let released = false
 cube = []
-let incr = 0.5
+let incr = 0.1
 
 function setup(){
     createCanvas(window.innerWidth,window.innerHeight,WEBGL)
@@ -25,15 +25,16 @@ function setup(){
                 else if(((i == 0 || i == n-1) && (j == 0 || j == n-1)) || ((i == 0 || i == n-1) && (k == 0 || k == n-1)) || ((k == 0 || k == n-1) && (j == 0 || j == n-1)))t=1;
                 else if((i == 0 || i == n-1) || (j == 0 || j == n-1) || (k == 0 || k == n-1))t=0;
                 else continue
-                cube.push(new Cube(t,i,j,k))
+                cube.push(new Cube(t,1,i,j,k))
             }
         }
     }
 }
 
 class Cube{
-    constructor(typ,i,j,k){
+    constructor(typ,st,i,j,k){
         this.typ = typ
+        this.state = st
         this.i = i
         this.j = j
         this.k = k
@@ -47,6 +48,7 @@ class Cube{
         this.angYZ = Math.atan(this.y/this.z)
         this.angXY = Math.atan(this.x/this.y)
         this.angXZ = Math.atan(this.z/this.x)
+        this.colours = []
         if (this.magXY == 0)this.angXY = 0;
         if (this.magXZ == 0)this.angXZ = 0;
         if (this.magYZ == 0)this.angYZ = 0;
@@ -56,12 +58,37 @@ class Cube{
         else if(this.x < 0)this.angXY += 2*PI
         if(this.x < 0)this.angXZ += PI;
         else if(this.z < 0)this.angXZ += 2*PI
-        this.col = (random()*255,random()*255,random()*255)
-        
-        
+        this.col = 50
+        if(this.i == 0)this.colours['blue'] = [-1,0,0]
+        if(this.j == 0)this.colours['yellow'] = [0,-1,0]
+        if(this.k == 0)this.colours['orange'] = [0,0,-1]
+        if(this.i == n-1)this.colours['green'] = [1,0,0]
+        if(this.j == n-1)this.colours['white'] = [0,1,0]
+        if(this.k == n-1)this.colours['red'] = [0,0,1]
     }
     show(){
         fill(this.col)
+        Object.keys(this.colours).forEach(e => {
+            let x = 1.05
+            let y = 1.05
+            let z = 1.05
+            if(this.colours[e][0] == 0)x=0.95;
+            if(this.colours[e][1] == 0)y=0.95;
+            if(this.colours[e][2] == 0)z=0.95;
+            // push()
+            // translate(this.x + e[0]*this.len*0.5,this.y + e[1]*this.len*0.5,this.z + e[2]*this.len*0.5)
+            push()
+            fill(e)
+            translate(this.x,this.y,this.z)
+            if(animating){
+                if(v == 0 && this.i == parseInt(ActualKey))rotateX((frameCount - fc)*-incr*reverse);
+                if(v == 1 && this.j == parseInt(ActualKey))rotateY((frameCount - fc)*-incr*reverse);
+                if(v == 2 && this.k == parseInt(ActualKey))rotateZ((frameCount - fc)*-incr*reverse);
+            }
+            // pop()
+            box(this.len*x,this.len*y,this.len*z)
+            pop()
+        });
         push()
         translate(this.x,this.y,this.z)
         if(animating){
@@ -88,6 +115,23 @@ class Cube{
         else if(this.x < 0)this.angXY += 2*PI
         if(this.x < 0)this.angXZ += PI;
         else if(this.z < 0)this.angXZ += 2*PI
+        Object.keys(this.colours).forEach(e => {
+            if(v == 0 && this.i == parseInt(ActualKey)){
+                let sw = this.colours[e][1]
+                this.colours[e][1] = this.colours[e][2]
+                this.colours[e][2] = sw
+            }
+            if(v == 1 && this.j == parseInt(ActualKey)){
+                let sw = this.colours[e][0]
+                this.colours[e][0] = this.colours[e][2]
+                this.colours[e][2] = sw
+            }
+            if(v == 2 && this.k == parseInt(ActualKey)){
+                let sw = this.colours[e][1]
+                this.colours[e][1] = this.colours[e][0]
+                this.colours[e][0] = sw
+            }
+        });
     }
 }
 
@@ -143,9 +187,9 @@ function draw(){
         let vlu = random() - 0.5
         reverse = vlu/Math.abs(vlu)
         fc = frameCount
-        console.log('yeee',v,ActualKey,reverse);    
-        
         animating = true
+        // console.log('yeee',v,ActualKey,reverse);    
+        
         // if(released){
         //     released = false
         //     reverse = 1
@@ -173,6 +217,6 @@ function draw(){
 //     }
 // }
 
-function keyReleased(){
-    noLoop()
+function keyPressed(){
+    if(key == 'q')noLoop()
 }
