@@ -1,4 +1,4 @@
-let n = 5
+let n = 3
 let v = 0
 let animating = false
 let totAngle = 0
@@ -12,36 +12,82 @@ let angXY
 let angXZ
 let reverse = 1
 let released = false
-let cube = {}
+let cube = []
 let incr = 0.01
 let increment = 0
-let incrAcc = 0.005
+let absIncrAcc = 0.05
+let incrAcc = absIncrAcc
 let continuing = true
+let shuffleCounter = 20
+let finished = ''
+let vInd = 0 
+let keyInd = 0
+let revInd = 1
+let moveMap = {}
+let firFlag = false
+let over = true
+let shuffling = false
 
+
+async function handleUpload(rep){;
+    
+    const formData = new FormData();
+    formData.append("n", JSON.stringify(n));
+    formData.append("bin", rep);
+    formData.append("fin", finished);
+    formData.append("map", JSON.stringify(moveMap));
+
+    try {
+    const res = await fetch("http://localhost:8000/upload", {
+        method: "POST",
+        // mode: "cors",
+        body: formData,
+    });
+
+    if (!res.ok) {
+        throw new Error("Upload failed");
+    }
+
+    const result = await res.json();
+    } catch (err) {
+    console.error(err);
+    alert("Upload failed: " + err.message);
+    }
+};
 
 function setup(){
     createCanvas(window.innerWidth,window.innerHeight,WEBGL)
-    for(let k = 0; k < n; k++){
+    let edgeCounter = 0
+    let cornerCounter = 0
+    let faceCounter = 0
+    for(let i = 0; i < n; i++){
         for(let j = 0; j < n; j++){
-            for(let i = 0; i < n; i++){
+            for(let k = 0; k < n; k++){
                 let t = 0
-                if((i == 0 || i == n-1) && (j == 0 || j == n-1) && (k == 0 || k == n-1))t=2;
-                else if(((i == 0 || i == n-1) && (j == 0 || j == n-1)) || ((i == 0 || i == n-1) && (k == 0 || k == n-1)) || ((k == 0 || k == n-1) && (j == 0 || j == n-1)))t=1;
-                else if((i == 0 || i == n-1) || (j == 0 || j == n-1) || (k == 0 || k == n-1))t=0;
+                let ind = -1
+                if((i == 0 || i == n-1) && (j == 0 || j == n-1) && (k == 0 || k == n-1)){t=2;ind=cornerCounter;cornerCounter+=1;}
+                else if(((i == 0 || i == n-1) && (j == 0 || j == n-1)) || ((i == 0 || i == n-1) && (k == 0 || k == n-1)) || ((k == 0 || k == n-1) && (j == 0 || j == n-1))){t=1;ind=edgeCounter;edgeCounter+=1}
+                else if((i == 0 || i == n-1) || (j == 0 || j == n-1) || (k == 0 || k == n-1)){t=0;ind=faceCounter;faceCounter+=1}
                 else continue
-                cube[i + j*n + k*n*n] = new Cube(t,0,i,j,k)
+                cube.push(new Cube(t,ind,i,j,k))
             }
         }
     }
+    console.log(cube);
+    finished = binGenerator()
+    
 }
 
 class Cube{
     constructor(typ,st,i,j,k){
         this.typ = typ
-        this.state = st
         this.i = i
         this.j = j
         this.k = k
+        this.actualIndex = st
+        this.actualIndex = BigInt(this.actualIndex)
+        this.index = st
+        this.index = BigInt(this.index)
         this.len = (min(height,width)*0.5)/n
         this.x = (this.i - n/2 + 0.5)*this.len
         this.y = (this.j - n/2 + 0.5)*this.len
@@ -106,21 +152,63 @@ class Cube{
         pop()
     }
     update(){
+
+        // console.log(this.x,this.y,this.z);
+        
         this.magYZ = Math.sqrt(this.y**2 + this.z**2)
         this.magXY = Math.sqrt(this.y**2 + this.x**2)
         this.magXZ = Math.sqrt(this.x**2 + this.z**2)
         this.angYZ = Math.atan(this.y/this.z)
         this.angXY = Math.atan(this.x/this.y)
         this.angXZ = Math.atan(this.z/this.x)
+        let changing = this.index
+        this.index = 0
+        if(this.typ == 2){
+            this.index = (this.k/(n-1)) + (this.j/(n-1))*2 + (this.i/(n-1))*4
+        }
+        else if(this.typ == 1){
+            if(this.i == 0 || this.i == n-1){
+                if(this.i == n-1)this.index = (n-2)*8
+                if(this.j == 0){
+                    this.index += this.k - 1
+                }
+                else if(this.j == n-1){
+                    this.index += this.k - 1 + (n-2)*3
+                }
+                else{
+                    this.index += n-2 + (this.j-1)*2 + this.k/(n-1)
+                }
+            }
+            else{
+                this.index = (n-2)*4 + (this.i-1)*4 + (this.j/(n-1))*2 + this.k/(n-1)
+            }
+        }
+        else{
+            if(this.i == 0){
+                this.index = (this.j-1)*(n-2) + (this.k-1)
+            }
+            else if(this.i == n-1){
+                this.index = (this.j-1)*(n-2) + (this.k-1)
+                this.index += (n-2)*(n-2) + 4*(n-2)
+            }
+            else{
+                this.index = (n-2)*(n-2) + (this.i-1)*4
+                if(this.j == 0 || this.j == n-1)this.index += this.k - 1
+                else this.index += this.k/(n-1)
+                if(this.j > 0)this.index += n-2 + (this.j - 1)*2
+            }
+        }
+        this.index = BigInt(this.index)
+        
         if (this.magXY == 0)this.angXY = 0;
         if (this.magXZ == 0)this.angXZ = 0;
         if (this.magYZ == 0)this.angYZ = 0;
-        if(this.z < 0)this.angYZ += PI;
-        else if(this.y < 0)this.angYZ += 2*PI
-        if(this.y < 0)this.angXY += PI;
-        else if(this.x < 0)this.angXY += 2*PI
-        if(this.x < 0)this.angXZ += PI;
-        else if(this.z < 0)this.angXZ += 2*PI
+        if(this.z < 0){this.angYZ += PI;}
+        else if(this.y < 0){this.angYZ += 2*PI;}
+        if(this.y < 0){this.angXY += PI;}
+        else if(this.x < 0){this.angXY += 2*PI;}
+        if(this.x < 0){this.angXZ += PI;}
+        else if(this.z < 0){this.angXZ += 2*PI;}
         Object.keys(this.colours).forEach(e => {
             if(v == 0 && this.i == parseInt(ActualKey)){
                 let sw = this.colours[e][1]
@@ -143,43 +231,43 @@ class Cube{
 
 function animate(v,num){
     let flag = false
-    Object.keys(cube).forEach(e => {
-        if( animating && ((v == 0 && cube[e].i == parseInt(num)) || (v == 1 && cube[e].j == parseInt(num)) || (v == 2 && cube[e].k == parseInt(num)))){
+    cube.forEach(e => {
+        if( animating && ((v == 0 && e.i == parseInt(num)) || (v == 1 && e.j == parseInt(num)) || (v == 2 && e.k == parseInt(num)))){
             
             // push()
-            // translate(cube[e].x,cube[e].y,cube[e].z)
-            if(v == 0){cube[e].y = cube[e].magYZ * sin(cube[e].angYZ + reverse * totAngle);cube[e].z = cube[e].magYZ * cos(cube[e].angYZ + reverse * totAngle);
+            // translate(e.x,e.y,e.z)
+            if(v == 0){e.y = e.magYZ * sin(e.angYZ + reverse * totAngle);e.z = e.magYZ * cos(e.angYZ + reverse * totAngle);
             }
-            else if(v == 1) {cube[e].x = cube[e].magXZ * cos(cube[e].angXZ + reverse * totAngle);cube[e].z = cube[e].magXZ * sin(cube[e].angXZ + reverse * totAngle);}
-            else if(v == 2) {cube[e].x = cube[e].magXY * sin(cube[e].angXY + reverse * totAngle);cube[e].y = cube[e].magXY * cos(cube[e].angXY + reverse * totAngle);}
+            else if(v == 1) {e.x = e.magXZ * cos(e.angXZ + reverse * totAngle);e.z = e.magXZ * sin(e.angXZ + reverse * totAngle);}
+            else if(v == 2) {e.x = e.magXY * sin(e.angXY + reverse * totAngle);e.y = e.magXY * cos(e.angXY + reverse * totAngle);}
             
             // pop()
             if(totAngle >= (HALF_PI - 0.01)){
                 flag = true
-                if(v == 0){cube[e].y = cube[e].magYZ * sin((cube[e].angYZ + reverse * HALF_PI));cube[e].z = cube[e].magYZ * cos((cube[e].angYZ + reverse * HALF_PI))}
-                else if(v == 1) {cube[e].x = cube[e].magXZ * cos((cube[e].angXZ + reverse * HALF_PI));cube[e].z = cube[e].magXZ * sin((cube[e].angXZ + reverse * HALF_PI));}
-                else if(v == 2) {cube[e].x = cube[e].magXY * sin((cube[e].angXY + reverse * HALF_PI));cube[e].y = cube[e].magXY * cos((cube[e].angXY + reverse * HALF_PI));}
+                if(v == 0){e.y = e.magYZ * sin((e.angYZ + reverse * HALF_PI));e.z = e.magYZ * cos((e.angYZ + reverse * HALF_PI))}
+                else if(v == 1) {e.x = e.magXZ * cos((e.angXZ + reverse * HALF_PI));e.z = e.magXZ * sin((e.angXZ + reverse * HALF_PI));}
+                else if(v == 2) {e.x = e.magXY * sin((e.angXY + reverse * HALF_PI));e.y = e.magXY * cos((e.angXY + reverse * HALF_PI));}
             }
-            else if (totAngle >= HALF_PI/2){incrAcc = -0.005;}
+            else if (totAngle >= HALF_PI/2){incrAcc = -absIncrAcc;}
         }
     });
     increment += incrAcc
     totAngle += increment
     if(flag){fc = 0;animating = false;
-        Object.keys(cube).forEach(e => {
+        cube.forEach(e => {
             // console.log(e.x,e.y,e.z);
             
-            if(((v == 0 && cube[e].i == parseInt(num)) || (v == 1 && cube[e].j == parseInt(num)) || (v == 2 && cube[e].k == parseInt(num)))){
+            if(((v == 0 && e.i == parseInt(num)) || (v == 1 && e.j == parseInt(num)) || (v == 2 && e.k == parseInt(num)))){
                 
-                // console.log(cube[e].i,cube[e].j,cube[e].k,'BEFORE');
-                cube[e].j = Math.round(Math.abs(cube[e].y/cube[e].len + (n-1)/2))
-                cube[e].i = Math.round(Math.abs(cube[e].x/cube[e].len + (n-1)/2))
-                cube[e].k = Math.round(Math.abs(cube[e].z/cube[e].len + (n-1)/2))
-                // console.log(cube[e].i,cube[e].j,cube[e].k,'AFTER');
-                cube[e].update()
+                // console.log(e.i,e.j,e.k,'BEFORE');
+                e.j = Math.round(Math.abs(e.y/e.len + (n-1)/2))
+                e.i = Math.round(Math.abs(e.x/e.len + (n-1)/2))
+                e.k = Math.round(Math.abs(e.z/e.len + (n-1)/2))
+                // console.log(e.i,e.j,e.k,'AFTER');
+                e.update()
             }
         }); 
-        incrAcc = 0.005
+        incrAcc = absIncrAcc
         totAngle = 0
         increment = 0
     }   
@@ -187,28 +275,75 @@ function animate(v,num){
 
 function draw(){
     background(0)
+    let checker = []
+    cube.forEach(e => {
+        e.show()
+        let ind = e.i + e.j*n + e.k*n*n
+        if(checker.includes(ind)){
+            continuing = false
+            location.reload()
+            
+        }
+        else{
+            checker.push(ind)
+        }
+    });
     if (animating){
         // console.log(ActualKey,totAngle,QUARTER_PI);
         
         animate(v,ActualKey)
     }
     else{
-        v = Math.round(random()*2)
-        ActualKey = JSON.stringify(Math.round(random()*(n-1)))
-        let vlu = random() - 0.5
-        reverse = vlu/Math.abs(vlu)
-        fc = frameCount
-        if(continuing)animating = true;
-        // console.log('yeee',v,ActualKey,reverse);    
-        
-        // if(released){
-        //     released = false
-        //     reverse = 1
-        // }
+        if(shuffling){
+            if(shuffleCounter > 0){
+                v = Math.round(random()*2)
+                ActualKey = JSON.stringify(Math.round(random()*(n-1)))
+                let vlu = random() - 0.5
+                reverse = vlu/Math.abs(vlu)
+                fc = frameCount
+                if(continuing)animating = true;
+                shuffleCounter -= 1
+                // console.log('yeee',v,ActualKey,reverse);    
+                
+                // if(released){
+                //     released = false
+                //     reverse = 1
+                // }
+            }
+            else{
+                let b = binGenerator()
+                handleUpload(b)
+                noLoop()
+            }
+        }
+        else{
+            let undoing = 1
+            if(over){
+                if(firFlag){
+                    if(revInd == 1)revInd = -1;
+                    else if(keyInd < n-1){revInd = 1;keyInd += 1;}
+                    else if(vInd < 2){revInd = 1; keyInd = 0; vInd += 1}
+                    else {shuffling = true;console.log(moveMap);
+                    }
+                }
+                else{
+                    firFlag = true
+                }
+                over = false
+            }
+            else{
+                mapGenerator(((vInd+1) + (keyInd+1)*10)*revInd)
+                undoing = -1
+                over = true
+            }
+            v = vInd
+            ActualKey = JSON.stringify(keyInd)
+            reverse = revInd * undoing
+            fc = frameCount
+            if(continuing)animating = true;
+
+        }
     }
-    Object.keys(cube).forEach(e => {
-        cube[e].show()
-    });
     
     orbitControl();
 }
@@ -216,74 +351,67 @@ function draw(){
 function keyPressed(){
     if(key == 'q'){
         if(continuing)continuing = false
-        else {continuing = true;binGenerator()}
-        
+        else {continuing = true}
     }
+    if(key == 'b' && continuing == false)binGenerator()
+}
+
+function mapGenerator(k){
+    let mapper = {2:{},1:{},0:{}}
+    cube.forEach(e => {
+        mapper[e.typ][Number(e.actualIndex)] = Number(e.index)
+    });
+    moveMap[k] = mapper
 }
 
 function binGenerator(){
-    let edgeCounter = 0
-    let cornerCounter = 0
-    let faceCounter = 0
-    let edgeLen = 0
-    let faceLen = 0
+    let edgeLen = 0n
+    let faceLen = 0n
     let corners = 0n
     let edges = 0n
     let faces = 0n
 
     if(n > 2){edgeLen = BigInt(Math.floor(Math.log2((n-2)*12)) + 1);faceLen = BigInt(Math.floor(Math.log2(6*(n-2)*(n-2))) + 1)}
     
-    for(let i = 0; i < n; i++){
-        for(let j = 0; j < n; j++){
-            for(let k = 0; k < n; k++){
-                if(((i == 0 || i == n-1) && (j == 0 || j == n-1) && (k == 0 || k == n-1)) ||
-                (((i == 0 || i == n-1) && (j == 0 || j == n-1)) || ((i == 0 || i == n-1) && (k == 0 || k == n-1)) || ((k == 0 || k == n-1) && (j == 0 || j == n-1))) ||
-                ((i == 0 || i == n-1) || (j == 0 || j == n-1) || (k == 0 || k == n-1))){
-                    let binrep = 0b0
-                    let cb = cube[i + j*n + k*n*n]
-                    let cornerShift = 3n
-                    let cornerOrientShift = 2n
-                    if(cb.typ == 2){
-                        let orient = 0n
-                        if(Object.keys(cb.colours).includes('yellow')){
-                            if(cb.colours['yellow'][0] == 1)orient = 1n
-                            if(cb.colours['yellow'][2] == 1)orient = 2n
-                        }
-                        else if(Object.keys(cb.colours).includes('white')){
-                            if(cb.colours['white'][0] == 1)orient = 1n
-                            if(cb.colours['white'][2] == 1)orient = 2n
-                        }
-                        let pos = BigInt(cornerCounter)
-                        corners = corners << cornerShift
-                        corners |= pos
-                        corners = corners << cornerOrientShift
-                        corners |= orient
-                        cornerCounter += 1
-    
-                    }
-                    else if(cb.typ == 1){
-                        let orient = 0n
-                        let ky = Object.keys(cb.solveMap)[0]
-                        if(cb.solveMap[ky] != cb.colours[ky])orient = 1n;
-                        let pos = BigInt(edgeCounter)
-                        edges = edges << edgeLen
-                        edges |= pos
-                        edges = edges << 1n
-                        edges |= orient
-                        edgeCounter += 1
-                        // console.log(edges.toString(2));
-                        
-                    }
-                    else{
-                        let pos = BigInt(faceCounter)
-                        faces = faces << faceLen
-                        faces |= pos
-                        faceCounter += 1
-                    }
-                }
+    cube.forEach(e => {
+        let cb = e
+        let cornerShift = 3n
+        let cornerOrientShift = 2n
+        if(cb.typ == 2){
+            let orient = 0n
+            if(Object.keys(cb.colours).includes('yellow')){
+                if(cb.colours['yellow'][0] == 1)orient = 1n
+                if(cb.colours['yellow'][2] == 1)orient = 2n
             }
+            else if(Object.keys(cb.colours).includes('white')){
+                if(cb.colours['white'][0] == 1)orient = 1n
+                if(cb.colours['white'][2] == 1)orient = 2n
+            }
+            let pos = cb.actualIndex
+            pos = pos << 2n
+            pos |= orient
+            pos = pos << 5n*cb.index
+            corners |= pos
+            
         }
-    }
+        else if(cb.typ == 1){
+            let orient = 0n
+            let ky = Object.keys(cb.solveMap)[0]
+            
+            if((cb.solveMap[ky][0] + cb.solveMap[ky][1]*n + cb.solveMap[ky][2]*n*n != cb.colours[ky][0] + cb.colours[ky][1]*n + cb.colours[ky][2]*n*n))orient = 1n;
+            let pos = cb.actualIndex
+            pos = pos << 1n
+            pos |= orient
+            pos = pos << (edgeLen+1n)*cb.index
+            edges |= pos
+            
+        }
+        else{
+            let pos = cb.actualIndex
+            pos = pos << faceLen*cb.index
+            faces |= pos
+        }
+    });
     console.log(corners.toString(2),edges.toString(2),faces.toString(2));
-    
+    return (corners.toString(2)+' '+edges.toString(2)+' '+faces.toString(2))
 }
