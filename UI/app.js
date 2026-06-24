@@ -15,10 +15,10 @@ let released = false
 let cube = []
 let incr = 0.01
 let increment = 0
-let absIncrAcc = 0.05
+let absIncrAcc = 0.1
 let incrAcc = absIncrAcc
 let continuing = true
-let shuffleCounter = 20
+let shuffleCounter = 0
 let finished = ''
 let vInd = 0 
 let keyInd = 0
@@ -27,15 +27,18 @@ let moveMap = {}
 let firFlag = false
 let over = true
 let shuffling = false
-
+let calibrating = true
+let nextMove = false
+let start = 'start'
 
 async function handleUpload(rep){;
     
     const formData = new FormData();
     formData.append("n", JSON.stringify(n));
-    formData.append("bin", rep);
+    formData.append("bina", rep);
     formData.append("fin", finished);
     formData.append("map", JSON.stringify(moveMap));
+    formData.append("st", start);
 
     try {
     const res = await fetch("http://localhost:8000/upload", {
@@ -48,7 +51,23 @@ async function handleUpload(rep){;
         throw new Error("Upload failed");
     }
 
-    const result = await res.json();
+    let moveSet = await res.json();
+    moveSet = moveSet['move']
+    if(moveSet == 'solved'){
+        console.log('solved');
+        
+    }
+    else{
+        ActualKey = `${Math.floor(Math.abs(moveSet/10)) - 1}`
+        v = Math.abs(moveSet)%10 - 1
+        reverse = moveSet/Math.abs(moveSet)
+        fc = frameCount
+        if(start == 'start'){
+            start = 'stop'
+        }
+        if(continuing){animating = true;nextMove = true}
+    }
+    
     } catch (err) {
     console.error(err);
     alert("Upload failed: " + err.message);
@@ -86,6 +105,7 @@ class Cube{
         this.k = k
         this.actualIndex = st
         this.actualIndex = BigInt(this.actualIndex)
+        this.ori = 0
         this.index = st
         this.index = BigInt(this.index)
         this.len = (min(height,width)*0.5)/n
@@ -263,6 +283,11 @@ function animate(v,num){
                 e.j = Math.round(Math.abs(e.y/e.len + (n-1)/2))
                 e.i = Math.round(Math.abs(e.x/e.len + (n-1)/2))
                 e.k = Math.round(Math.abs(e.z/e.len + (n-1)/2))
+
+                if (e.typ == 1 && parseInt(num) > 0 && parseInt(num) < n-1){
+                    if(e.ori == 0)e.ori = 1
+                    else if(e.ori == 1)e.ori = 0
+                }
                 // console.log(e.i,e.j,e.k,'AFTER');
                 e.update()
             }
@@ -303,6 +328,7 @@ function draw(){
                 fc = frameCount
                 if(continuing)animating = true;
                 shuffleCounter -= 1
+
                 // console.log('yeee',v,ActualKey,reverse);    
                 
                 // if(released){
@@ -311,20 +337,20 @@ function draw(){
                 // }
             }
             else{
-                let b = binGenerator()
-                handleUpload(b)
-                noLoop()
+                absIncrAcc = 0.05
+                shuffling = false
+                console.log('shuffling over');
+                
             }
         }
-        else{
+        else if(calibrating){
             let undoing = 1
             if(over){
                 if(firFlag){
                     if(revInd == 1)revInd = -1;
                     else if(keyInd < n-1){revInd = 1;keyInd += 1;}
                     else if(vInd < 2){revInd = 1; keyInd = 0; vInd += 1}
-                    else {shuffling = true;console.log(moveMap);
-                    }
+                    else {shuffling = true;console.log(moveMap);calibrating = false}
                 }
                 else{
                     firFlag = true
@@ -341,7 +367,15 @@ function draw(){
             reverse = revInd * undoing
             fc = frameCount
             if(continuing)animating = true;
-
+        }
+        else{
+            if(nextMove){
+                let b = binGenerator()
+                handleUpload(b)
+                nextMove = false
+                // noLoop()
+            }
+            
         }
     }
     
@@ -354,11 +388,13 @@ function keyPressed(){
         else {continuing = true}
     }
     if(key == 'b' && continuing == false)binGenerator()
+    if(key == 'g')nextMove = true
 }
 
 function mapGenerator(k){
     let mapper = {2:{},1:{},0:{}}
     cube.forEach(e => {
+        if(Number(e.actualIndex) != Number(e.index))
         mapper[e.typ][Number(e.actualIndex)] = Number(e.index)
     });
     moveMap[k] = mapper
@@ -397,8 +433,7 @@ function binGenerator(){
         else if(cb.typ == 1){
             let orient = 0n
             let ky = Object.keys(cb.solveMap)[0]
-            
-            if((cb.solveMap[ky][0] + cb.solveMap[ky][1]*n + cb.solveMap[ky][2]*n*n != cb.colours[ky][0] + cb.colours[ky][1]*n + cb.colours[ky][2]*n*n))orient = 1n;
+            orient = BigInt(cb.ori)
             let pos = cb.actualIndex
             pos = pos << 1n
             pos |= orient
@@ -412,6 +447,5 @@ function binGenerator(){
             faces |= pos
         }
     });
-    console.log(corners.toString(2),edges.toString(2),faces.toString(2));
     return (corners.toString(2)+' '+edges.toString(2)+' '+faces.toString(2))
 }
