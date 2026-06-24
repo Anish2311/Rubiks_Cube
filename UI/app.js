@@ -1,4 +1,4 @@
-let n = 3
+let n = 2
 let v = 0
 let animating = false
 let totAngle = 0
@@ -18,7 +18,7 @@ let increment = 0
 let absIncrAcc = 0.1
 let incrAcc = absIncrAcc
 let continuing = true
-let shuffleCounter = 0
+let shuffleCounter = 50
 let finished = ''
 let vInd = 0 
 let keyInd = 0
@@ -30,6 +30,7 @@ let shuffling = false
 let calibrating = true
 let nextMove = false
 let start = 'start'
+const tex = document.getElementById('text')
 
 async function handleUpload(rep){;
     
@@ -55,7 +56,7 @@ async function handleUpload(rep){;
     moveSet = moveSet['move']
     if(moveSet == 'solved'){
         console.log('solved');
-        
+        tex.innerHTML = 'Solved'
     }
     else{
         ActualKey = `${Math.floor(Math.abs(moveSet/10)) - 1}`
@@ -76,6 +77,13 @@ async function handleUpload(rep){;
 
 function setup(){
     createCanvas(window.innerWidth,window.innerHeight,WEBGL)
+    textAlign(CENTER, CENTER);
+    tex.innerHTML = 'Calibrating...'
+    cam2 = createCamera();
+    cam2.setPosition(400, -200, 400);
+    cam2.lookAt(0, 0, 0);
+
+    setCamera(cam2);
     let edgeCounter = 0
     let cornerCounter = 0
     let faceCounter = 0
@@ -108,7 +116,7 @@ class Cube{
         this.ori = 0
         this.index = st
         this.index = BigInt(this.index)
-        this.len = (min(height,width)*0.5)/n
+        this.len = (min(height,width)*0.25)/n
         this.x = (this.i - n/2 + 0.5)*this.len
         this.y = (this.j - n/2 + 0.5)*this.len
         this.z = (this.k - n/2 + 0.5)*this.len
@@ -130,25 +138,26 @@ class Cube{
         if(this.x < 0)this.angXZ += PI;
         else if(this.z < 0)this.angXZ += 2*PI
         this.col = 50
-        if(this.i == 0){this.colours['blue'] = [1,0,0];this.solveMap['blue'] = [1,0,0]}
-        if(this.j == 0){this.colours['yellow'] = [0,1,0];this.solveMap['yellow'] = [0,1,0]}
-        if(this.k == 0){this.colours['orange'] = [0,0,1];this.solveMap['orange'] = [0,0,1]}
-        if(this.i == n-1){this.colours['green'] = [1,0,0];this.solveMap['green'] = [1,0,0]}
+        if(this.i == 0){this.colours['rgb(1, 190, 254)'] = [1,0,0];this.solveMap['rgb(1, 190, 254)'] = [1,0,0]}
+        if(this.j == 0){this.colours['rgb(255, 221, 0)'] = [0,1,0];this.solveMap['rgb(255, 221, 0)'] = [0,1,0]}
+        if(this.k == 0){this.colours['rgb(255,125,0)'] = [0,0,1];this.solveMap['rgb(255,125,0)'] = [0,0,1]}
+        if(this.i == n-1){this.colours['rgb(150, 255, 2)'] = [1,0,0];this.solveMap['rgb(150, 255, 2)'] = [1,0,0]}
         if(this.j == n-1){this.colours['white'] = [0,1,0];this.solveMap['white'] = [0,1,0]}
-        if(this.k == n-1){this.colours['red'] = [0,0,1];this.solveMap['white'] = [0,1,0]}
+        if(this.k == n-1){this.colours['rgb(255, 0, 109)'] = [0,0,1];this.solveMap['rgb(255, 0, 109)'] = [0,1,0]}
     }
     show(){
         Object.keys(this.colours).forEach(e => {
             let x = 1.001
             let y = 1.001
             let z = 1.001
-            if(this.colours[e][0] == 0)x=0.95;
-            if(this.colours[e][1] == 0)y=0.95;
-            if(this.colours[e][2] == 0)z=0.95;
+            if(this.colours[e][0] == 0)x=0.99;
+            if(this.colours[e][1] == 0)y=0.99;
+            if(this.colours[e][2] == 0)z=0.99;
             // push()
             // translate(this.x + e[0]*this.len*0.5,this.y + e[1]*this.len*0.5,this.z + e[2]*this.len*0.5)
             push()
             fill(e)
+            noStroke()
             translate(this.x,this.y,this.z)
             if(animating){
                 if(v == 0 && this.i == parseInt(ActualKey))rotateX(totAngle*-1*reverse);
@@ -340,6 +349,7 @@ function draw(){
                 absIncrAcc = 0.05
                 shuffling = false
                 console.log('shuffling over');
+                tex.innerHTML = 'Waiting...'
                 
             }
         }
@@ -350,7 +360,7 @@ function draw(){
                     if(revInd == 1)revInd = -1;
                     else if(keyInd < n-1){revInd = 1;keyInd += 1;}
                     else if(vInd < 2){revInd = 1; keyInd = 0; vInd += 1}
-                    else {shuffling = true;console.log(moveMap);calibrating = false}
+                    else {shuffling = true;console.log(moveMap);calibrating = false;tex.innerHTML = 'Shuffling...'}
                 }
                 else{
                     firFlag = true
@@ -388,7 +398,7 @@ function keyPressed(){
         else {continuing = true}
     }
     if(key == 'b' && continuing == false)binGenerator()
-    if(key == 'g')nextMove = true
+    if(key == 'g'){nextMove = true; tex.innerHTML = 'Solving...'}
 }
 
 function mapGenerator(k){
@@ -415,9 +425,9 @@ function binGenerator(){
         let cornerOrientShift = 2n
         if(cb.typ == 2){
             let orient = 0n
-            if(Object.keys(cb.colours).includes('yellow')){
-                if(cb.colours['yellow'][0] == 1)orient = 1n
-                if(cb.colours['yellow'][2] == 1)orient = 2n
+            if(Object.keys(cb.colours).includes('rgb(255, 221, 0)')){
+                if(cb.colours['rgb(255, 221, 0)'][0] == 1)orient = 1n
+                if(cb.colours['rgb(255, 221, 0)'][2] == 1)orient = 2n
             }
             else if(Object.keys(cb.colours).includes('white')){
                 if(cb.colours['white'][0] == 1)orient = 1n

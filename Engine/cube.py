@@ -4,7 +4,7 @@ import json
 import math
 from numba import njit
 
-depths = 3
+depths = 4
 
 moveRecorder = {}
 app = FastAPI()
