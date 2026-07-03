@@ -5,7 +5,7 @@ import math
 from numba import njit
 
 depths = 3
-fromSolvedDepths = 7
+fromSolvedDepths = 5
 
 moveRecorder = {}
 solvedStates = {}
@@ -70,9 +70,9 @@ async def upload_file(n: str = Form(...),bina: str = Form(...),fin: str = Form(.
         reached = False
     if edges == resEdge and corners == resCorner and faces == resFace:
         return {'move':'solved'}
-    if edges == resEdge:
+    if nu > 2 and edges == resEdge:
         faceTurns = [0,1]
-    if faces == resFace:
+    if nu > 2 and faces == resFace:
         indTurns = [0,nu-1]
     v = evaluate(corners,edges,faces)
     print(v)
@@ -176,7 +176,7 @@ def compute(corner,edge,face,depth,n,fromSolved,prevMove):
                         rev = -1
                     res = -800
                     if fromSolved:
-                        if ((j+1)*10 + (i+1))*rev*-1 != prevMove and j != 1 and i != 1:
+                        if ((j+1)*10 + (i+1))*rev*-1 != prevMove and (j == 0 or j == nu - 1) and (nu == 2 or i != 1):
                             cr, ed, fc = makeMove(corner,edge,face,j,i,rev)
                             en = encrypt(cr,ed,fc)
                             if en not in solvedStates:
@@ -193,7 +193,7 @@ def compute(corner,edge,face,depth,n,fromSolved,prevMove):
                             if enc in solvedStates:
                                 if solvedStates[enc] > res:
                                     res = solvedStates[enc]
-                                print('__________________________________',res)
+                                # print('__________________________________',res)
                             if enc in moveRecorder and moveRecorder[enc] >= depth:
                                 continue
                             moveRecorder[enc] = depth
@@ -299,6 +299,8 @@ def evaluate(corners,edges,faces):
             depths = 3
             faceTurns = [0,1,2]
             cornerIncr = 0
+    else:
+        cornerIncr = 1
     bitMask = 0b11111
     j = resCorner
     for i in range(8):

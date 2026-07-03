@@ -1,4 +1,4 @@
-let n = 3
+let n = 2
 let v = 0
 let animating = false
 let totAngle = 0
