@@ -1,8 +1,9 @@
-let n = 2
+let n = 3
 let v = 0
 let animating = false
 let totAngle = 0
 let ActualKey
+let dou = false
 let fc
 let magYZ
 let magXY
@@ -59,6 +60,11 @@ async function handleUpload(rep){;
         tex.innerHTML = 'Solved'
     }
     else{
+        dou = false
+        if(moveSet%1000 == 0){
+            dou = true
+            moveSet = Number(moveSet / 1000)
+        }
         ActualKey = `${Math.floor(Math.abs(moveSet/10)) - 1}`
         v = Math.abs(moveSet)%10 - 1
         reverse = moveSet/Math.abs(moveSet)
@@ -247,27 +253,33 @@ class Cube{
         else if(this.z < 0){this.angXZ += 2*PI;}
         let kys = Object.keys(this.colours)
         kys.forEach(e => {
-            if(v == 0 && this.i == ActualKey){
-                let sw = this.colours[e][1]
-                this.colours[e][1] = this.colours[e][2]
-                this.colours[e][2] = sw
-            }
-            if(v == 1 && this.j == ActualKey){
-                let sw = this.colours[e][0]
-                this.colours[e][0] = this.colours[e][2]
-                this.colours[e][2] = sw
-            }
-            if(v == 2 && this.k == ActualKey){
-                let sw = this.colours[e][1]
-                this.colours[e][1] = this.colours[e][0]
-                this.colours[e][0] = sw
+            if(dou == false){
+                if(v == 0 && this.i == ActualKey){
+                    let sw = this.colours[e][1]
+                    this.colours[e][1] = this.colours[e][2]
+                    this.colours[e][2] = sw
+                }
+                if(v == 1 && this.j == ActualKey){
+                    let sw = this.colours[e][0]
+                    this.colours[e][0] = this.colours[e][2]
+                    this.colours[e][2] = sw
+                }
+                if(v == 2 && this.k == ActualKey){
+                    let sw = this.colours[e][1]
+                    this.colours[e][1] = this.colours[e][0]
+                    this.colours[e][0] = sw
+                }
             }
         });
     }
 }
 
-function animate(v,num){
+function animate(v,num,dou){
     let flag = false
+    let resAngle = HALF_PI
+    if (dou){
+        resAngle = PI
+    }
     cube.forEach(e => {
         if( animating && ((v == 0 && e.i == num) || (v == 1 && e.j == num) || (v == 2 && e.k == num))){
             
@@ -279,13 +291,13 @@ function animate(v,num){
             else if(v == 2) {e.x = e.magXY * sin(e.angXY + reverse * totAngle);e.y = e.magXY * cos(e.angXY + reverse * totAngle);}
             
             // pop()
-            if(totAngle >= (HALF_PI - 0.01)){
+            if(totAngle >= (resAngle - 0.01)){
                 flag = true
-                if(v == 0){e.y = e.magYZ * sin((e.angYZ + reverse * HALF_PI));e.z = e.magYZ * cos((e.angYZ + reverse * HALF_PI))}
-                else if(v == 1) {e.x = e.magXZ * cos((e.angXZ + reverse * HALF_PI));e.z = e.magXZ * sin((e.angXZ + reverse * HALF_PI));}
-                else if(v == 2) {e.x = e.magXY * sin((e.angXY + reverse * HALF_PI));e.y = e.magXY * cos((e.angXY + reverse * HALF_PI));}
+                if(v == 0){e.y = e.magYZ * sin((e.angYZ + reverse * resAngle));e.z = e.magYZ * cos((e.angYZ + reverse * resAngle))}
+                else if(v == 1) {e.x = e.magXZ * cos((e.angXZ + reverse * resAngle));e.z = e.magXZ * sin((e.angXZ + reverse * resAngle));}
+                else if(v == 2) {e.x = e.magXY * sin((e.angXY + reverse * resAngle));e.y = e.magXY * cos((e.angXY + reverse * resAngle));}
             }
-            else if (totAngle >= HALF_PI/2){incrAcc = -absIncrAcc;}
+            else if (totAngle >= resAngle/2){incrAcc = -absIncrAcc;}
         }
     });
     increment += incrAcc
@@ -301,7 +313,7 @@ function animate(v,num){
                 e.i = Math.round(Math.abs(e.x/e.len + (n-1)/2))
                 e.k = Math.round(Math.abs(e.z/e.len + (n-1)/2))
 
-                if (e.typ == 1 && ((num > 0 && num < n-1) || v == 1)){
+                if (dou == false && (e.typ == 1 && ((num > 0 && num < n-1) || v == 1))){
                     if(e.ori == 0)e.ori = 1
                     else if(e.ori == 1)e.ori = 0
                 }
@@ -317,23 +329,10 @@ function animate(v,num){
 
 function draw(){
     background(0)
-    let checker = []
-    cube.forEach(e => {
-        e.show()
-        let ind = e.i + e.j*n + e.k*n*n
-        if(checker.includes(ind)){
-            continuing = false
-            location.reload()
-            
-        }
-        else{
-            checker.push(ind)
-        }
-    });
     if (animating){
         // console.log(ActualKey,totAngle,QUARTER_PI);
         
-        animate(v,ActualKey)
+        animate(v,ActualKey,dou)
     }
     else{
         if(shuffling){
@@ -344,23 +343,23 @@ function draw(){
                 ActualKey = items[Math.floor(Math.random() * items.length)];   
                 let vlu = random() - 0.5
                 reverse = vlu/Math.abs(vlu)
+                dou = random() < 0.5
                 fc = frameCount
                 if(continuing)animating = true;
                 shuffleCounter -= 1
-
+                
                 // console.log('yeee',v,ActualKey,reverse);    
                 
                 // if(released){
-                //     released = false
-                //     reverse = 1
-                // }
+                    //     released = false
+                    //     reverse = 1
+                    // }
             }
             else{
-                absIncrAcc = 0.05
                 shuffling = false
                 console.log('shuffling over');
                 tex.innerHTML = 'Waiting...'
-                
+                    
             }
         }
         else if(calibrating){
@@ -368,9 +367,10 @@ function draw(){
             if(over){
                 if(firFlag){
                     if(revInd == 1)revInd = -1;
-                    else if(keyInd < n-1){revInd = 1;keyInd += 1;}
-                    else if(vInd < 2){revInd = 1; keyInd = 0; vInd += 1}
-                    else {shuffling = true;console.log(moveMap);calibrating = false;tex.innerHTML = 'Shuffling...'}
+                    else if(dou == false)dou = true;
+                    else if(keyInd < n-1){revInd = 1;keyInd += 1;dou = false}
+                    else if(vInd < 2){revInd = 1; keyInd = 0; vInd += 1,dou = false}
+                    else {absIncrAcc = 0.01;shuffling = true;console.log(moveMap);calibrating = false;tex.innerHTML = 'Shuffling...'}
                 }
                 else{
                     firFlag = true
@@ -378,15 +378,21 @@ function draw(){
                 over = false
             }
             else{
-                mapGenerator(((vInd+1) + (keyInd+1)*10)*revInd)
+                let scale = 1
+                let k = ((vInd+1) + (keyInd+1)*10)*revInd
+                if(dou){scale = 1000;k = abs(k)}
+                mapGenerator(k*scale)
                 undoing = -1
                 over = true
             }
-            v = vInd
-            ActualKey = keyInd
-            reverse = revInd * undoing
-            fc = frameCount
-            if(continuing)animating = true;
+            if(calibrating){
+                v = vInd
+                ActualKey = keyInd
+                reverse = revInd * undoing
+                fc = frameCount
+                if(continuing)animating = true;
+            }
+            else animating = false
         }
         else{
             if(nextMove){
@@ -397,16 +403,28 @@ function draw(){
             }
             
         }
+        }
+        let checker = []
+        cube.forEach(e => {
+            e.show()
+            let ind = e.i + e.j*n + e.k*n*n
+            if(checker.includes(ind)){
+                continuing = false
+                location.reload()
+                
+            }
+            else{
+                checker.push(ind)
+            }
+        });
+        orbitControl();
     }
     
-    orbitControl();
-}
-
-function keyPressed(){
-    if(key == 'q'){
-        if(continuing)continuing = false
-        else {continuing = true}
-    }
+    function keyPressed(){
+        if(key == 'q'){
+            if(continuing)continuing = false
+            else {continuing = true}
+        }
     if(key == 'b' && continuing == false)binGenerator()
     if(key == 'g'){nextMove = true; tex.innerHTML = 'Caching...'}
 }
