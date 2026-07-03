@@ -1,4 +1,4 @@
-let n = 2
+let n = 3
 let v = 0
 let animating = false
 let totAngle = 0
@@ -18,7 +18,7 @@ let increment = 0
 let absIncrAcc = 0.1
 let incrAcc = absIncrAcc
 let continuing = true
-let shuffleCounter = 50
+let shuffleCounter = 15
 let finished = ''
 let vInd = 0 
 let keyInd = 0
@@ -65,6 +65,7 @@ async function handleUpload(rep){;
         fc = frameCount
         if(start == 'start'){
             start = 'stop'
+            tex.innerHTML = 'Solving...'
         }
         if(continuing){animating = true;nextMove = true}
     }
@@ -102,6 +103,11 @@ function setup(){
     }
     console.log(cube);
     finished = binGenerator()
+    console.log(
+        _renderer.GL.getParameter(
+            _renderer.GL.MAX_TEXTURE_SIZE
+        )
+    );
     
 }
 
@@ -146,7 +152,8 @@ class Cube{
         if(this.k == n-1){this.colours['rgb(255, 0, 109)'] = [0,0,1];this.solveMap['rgb(255, 0, 109)'] = [0,1,0]}
     }
     show(){
-        Object.keys(this.colours).forEach(e => {
+        let kys = Object.keys(this.colours)
+        kys.forEach(e => {
             let x = 1.001
             let y = 1.001
             let z = 1.001
@@ -160,9 +167,9 @@ class Cube{
             noStroke()
             translate(this.x,this.y,this.z)
             if(animating){
-                if(v == 0 && this.i == parseInt(ActualKey))rotateX(totAngle*-1*reverse);
-                if(v == 1 && this.j == parseInt(ActualKey))rotateY(totAngle*-1*reverse);
-                if(v == 2 && this.k == parseInt(ActualKey))rotateZ(totAngle*-1*reverse);
+                if(v == 0 && this.i == ActualKey)rotateX(totAngle*-1*reverse);
+                if(v == 1 && this.j == ActualKey)rotateY(totAngle*-1*reverse);
+                if(v == 2 && this.k == ActualKey)rotateZ(totAngle*-1*reverse);
             }
             // pop()
             box(this.len*x,this.len*y,this.len*z)
@@ -173,9 +180,9 @@ class Cube{
         noStroke()
         translate(this.x,this.y,this.z)
         if(animating){
-            if(v == 0 && this.i == parseInt(ActualKey))rotateX(totAngle*-1*reverse);
-            if(v == 1 && this.j == parseInt(ActualKey))rotateY(totAngle*-1*reverse);
-            if(v == 2 && this.k == parseInt(ActualKey))rotateZ(totAngle*-1*reverse);
+            if(v == 0 && this.i == ActualKey)rotateX(totAngle*-1*reverse);
+            if(v == 1 && this.j == ActualKey)rotateY(totAngle*-1*reverse);
+            if(v == 2 && this.k == ActualKey)rotateZ(totAngle*-1*reverse);
         }
         box(this.len,this.len,this.len)
         pop()
@@ -238,18 +245,19 @@ class Cube{
         else if(this.x < 0){this.angXY += 2*PI;}
         if(this.x < 0){this.angXZ += PI;}
         else if(this.z < 0){this.angXZ += 2*PI;}
-        Object.keys(this.colours).forEach(e => {
-            if(v == 0 && this.i == parseInt(ActualKey)){
+        let kys = Object.keys(this.colours)
+        kys.forEach(e => {
+            if(v == 0 && this.i == ActualKey){
                 let sw = this.colours[e][1]
                 this.colours[e][1] = this.colours[e][2]
                 this.colours[e][2] = sw
             }
-            if(v == 1 && this.j == parseInt(ActualKey)){
+            if(v == 1 && this.j == ActualKey){
                 let sw = this.colours[e][0]
                 this.colours[e][0] = this.colours[e][2]
                 this.colours[e][2] = sw
             }
-            if(v == 2 && this.k == parseInt(ActualKey)){
+            if(v == 2 && this.k == ActualKey){
                 let sw = this.colours[e][1]
                 this.colours[e][1] = this.colours[e][0]
                 this.colours[e][0] = sw
@@ -261,7 +269,7 @@ class Cube{
 function animate(v,num){
     let flag = false
     cube.forEach(e => {
-        if( animating && ((v == 0 && e.i == parseInt(num)) || (v == 1 && e.j == parseInt(num)) || (v == 2 && e.k == parseInt(num)))){
+        if( animating && ((v == 0 && e.i == num) || (v == 1 && e.j == num) || (v == 2 && e.k == num))){
             
             // push()
             // translate(e.x,e.y,e.z)
@@ -286,14 +294,14 @@ function animate(v,num){
         cube.forEach(e => {
             // console.log(e.x,e.y,e.z);
             
-            if(((v == 0 && e.i == parseInt(num)) || (v == 1 && e.j == parseInt(num)) || (v == 2 && e.k == parseInt(num)))){
+            if(((v == 0 && e.i == num) || (v == 1 && e.j == num) || (v == 2 && e.k == num))){
                 
                 // console.log(e.i,e.j,e.k,'BEFORE');
                 e.j = Math.round(Math.abs(e.y/e.len + (n-1)/2))
                 e.i = Math.round(Math.abs(e.x/e.len + (n-1)/2))
                 e.k = Math.round(Math.abs(e.z/e.len + (n-1)/2))
 
-                if (e.typ == 1 && parseInt(num) > 0 && parseInt(num) < n-1){
+                if (e.typ == 1 && ((num > 0 && num < n-1) || v == 1)){
                     if(e.ori == 0)e.ori = 1
                     else if(e.ori == 1)e.ori = 0
                 }
@@ -331,7 +339,9 @@ function draw(){
         if(shuffling){
             if(shuffleCounter > 0){
                 v = Math.round(random()*2)
-                ActualKey = JSON.stringify(Math.round(random()*(n-1)))
+                ActualKey = Math.random()
+                const items = [0,n-1,1];
+                ActualKey = items[Math.floor(Math.random() * items.length)];   
                 let vlu = random() - 0.5
                 reverse = vlu/Math.abs(vlu)
                 fc = frameCount
@@ -373,7 +383,7 @@ function draw(){
                 over = true
             }
             v = vInd
-            ActualKey = JSON.stringify(keyInd)
+            ActualKey = keyInd
             reverse = revInd * undoing
             fc = frameCount
             if(continuing)animating = true;
@@ -398,7 +408,7 @@ function keyPressed(){
         else {continuing = true}
     }
     if(key == 'b' && continuing == false)binGenerator()
-    if(key == 'g'){nextMove = true; tex.innerHTML = 'Solving...'}
+    if(key == 'g'){nextMove = true; tex.innerHTML = 'Caching...'}
 }
 
 function mapGenerator(k){
