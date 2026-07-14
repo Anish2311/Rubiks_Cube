@@ -5,7 +5,7 @@ import math
 from numba import njit
 
 depths = 3
-fromSolvedDepths = 5
+fromSolvedDepths = 4
 
 moveRecorder = {}
 solvedStates = {}
@@ -33,16 +33,22 @@ async def upload_file(n: str = Form(...),bina: str = Form(...),fin: str = Form(.
     global faceTurns
     global indTurns
     global revTurns
-    global douTurns
     global edgeIncr
     global edgeOriIncr
     global cornerIncr
+    global cornerIncrF
+    global edgeIncrF
+    global lv
+    global lvag
+    lv = [0,3,4,5,6,7,8,11]
+    lvag = [1,2,9,10]
     cornerIncr = 0
+    cornerIncrF = 0
+    edgeIncrF = 0
     edgeIncr = 0
     edgeOriIncr = 0
-    indTurns = []
-    revTurns = [1,-1]
-    douTurns = [1,1000]
+    indTurns = [1]
+    revTurns = [1,-1,2]
     faceTurns = [0,1,2]
     orInd = 0
     nu = int(n)
@@ -69,9 +75,11 @@ async def upload_file(n: str = Form(...),bina: str = Form(...),fin: str = Form(.
         print(orInd,'yeeee')
         print(moveMap)
         if len(solvedStates) == 0:
+            # revTurns = [2]
             compute(resCorner,resEdge,resFace,fromSolvedDepths,nu,True,prevMove)
         print(len(solvedStates))
         reached = False
+    revTurns = [1,-1,2]
     if edges == resEdge and corners == resCorner and faces == resFace:
         return {'move':'solved'}
     if nu > 2 and edges == resEdge:
@@ -138,7 +146,7 @@ def makeMove(c,e,f,ind,ori,rev,dou):
     cornerCopy = c
     edgeOriMove = False
     cornerOriMove = True
-    if dou == 1 and ((ind > 0 and ind < nu-1) or ori == 1):
+    if dou == 1 and ((ind > 0 and ind < nu-1) or ori == 2):
         edgeOriMove = True
     if dou == 1000:
         cornerOriMove = False
@@ -178,44 +186,66 @@ def compute(corner,edge,face,depth,n,fromSolved,prevMove):
         moveSet = (0,-1000000)
         if fromSolved:
             if corner == resCorner and edge == resEdge and face == resFace:
-                solvedStates[encrypt(corner,edge,face)] = (nu*nu*nu*nu + 1)*100000
+                solvedStates[encrypt(corner,edge,face)] = (nu*nu*nu*nu + 1)*1000000
+
+        moves = []
         for i in faceTurns:
             for j in indTurns:
-                for rev in revTurns:
-                    for dou in douTurns:
-                        res = -800
-                        if fromSolved:
-                            if ((i != prevMove[0] or j != prevMove[1]) and (j == 0 or j == nu - 1) and i != 1):
-                                cr, ed, fc = makeMove(corner,edge,face,j,i,rev,dou)
-                                en = encrypt(cr,ed,fc)
-                                if en not in solvedStates:
-                                    solvedStates[en] = (nu*nu*nu*nu + 1)*100000 - 5*(fromSolvedDepths - depth + 1)
-                                elif solvedStates[en] < (nu*nu*nu*nu + 1)*100000 - 5*(fromSolvedDepths - depth + 1):
-                                    solvedStates[en] = (nu*nu*nu*nu + 1)*100000 - 5*(fromSolvedDepths - depth + 1)
-                                prev = (i,j,rev,dou)
-                                compute(cr,ed,fc,depth-1,n,True,prev)
-                            
-                        else:
-                            if (i != prevMove[0] or j != prevMove[1]):
-                                cr, ed, fc = makeMove(corner,edge,face,j,i,rev,dou)
-                                enc = encrypt(cr,ed,fc)
-                                if enc in solvedStates:
-                                    if solvedStates[enc] > res:
-                                        res = solvedStates[enc]
-                                    # print('__________________________________',res)
-                                if enc in moveRecorder and moveRecorder[enc] >= depth:
-                                    continue
-                                moveRecorder[enc] = depth
-                                if depth != 0 and res == -800:
-                                    prev = (i,j,rev,dou)
-                                    res = compute(cr,ed,fc,depth - 1,n,False,prev)[1]
-                                elif res == -800:
-                                    res = evaluate(cr,ed,fc)
-                                res = res - 5*(depths - depth)
-                                if res > moveSet[1]:
-                                    moveSet = ((i,j,rev,dou),res)
-        else:
-            if fromSolved == False:
+                if i == 1:
+                    revTurnIter = [1,-1,2]
+                else:
+                    revTurnIter = revTurns
+                for rev in revTurnIter:
+                    dou = 1
+                    if rev == 2:
+                        rev = 1
+                        dou = 1000
+                    if fromSolved:
+                        if (i != prevMove[0]):
+                            cr, ed, fc = makeMove(corner,edge,face,j,i,rev,dou)
+                            en = encrypt(cr,ed,fc)
+                            if en not in solvedStates:
+                                solvedStates[en] = (nu*nu*nu*nu + 1)*1000000 - 5*(fromSolvedDepths - depth + 1)
+                            elif solvedStates[en] < (nu*nu*nu*nu + 1)*1000000 - 5*(fromSolvedDepths - depth + 1):
+                                solvedStates[en] = (nu*nu*nu*nu + 1)*1000000 - 5*(fromSolvedDepths - depth + 1)
+                            prev = (i,j,rev,dou)
+                            compute(cr,ed,fc,depth-1,n,True,prev)
+                    else:
+                        if (i != prevMove[0]):
+                            cr, ed, fc = makeMove(corner,edge,face,j,i,rev,dou)
+                            res = evaluate(cr,ed,fc)
+                            moves.append([(i,j,rev,dou),res])
+
+        if fromSolved == False:
+
+            moves.sort(key=lambda x:x[1],reverse=True)
+            if depth == 0:
+                return [moves[0][0],moves[0][1] - 5*(depths - depth)]
+            for mov in moves:
+                i = mov[0][0]
+                j = mov[0][1]
+                rev = mov[0][2]
+                dou = mov[0][3]
+                res = -800
+                if (i != prevMove[0]):
+                    cr, ed, fc = makeMove(corner,edge,face,j,i,rev,dou)
+                    enc = encrypt(cr,ed,fc)
+                    if enc in solvedStates:
+                        if solvedStates[enc] > res:
+                            res = solvedStates[enc]
+                        # print('__________________________________',res)
+                    if enc in moveRecorder and moveRecorder[enc] >= depth:
+                        continue
+                    moveRecorder[enc] = depth
+                    if depth != 0 and res == -800:
+                        prev = (i,j,rev,dou)
+                        res = compute(cr,ed,fc,depth - 1,n,False,prev)[1]
+                    elif res == -800:
+                        res = mov[1]
+                    res = res - 5*(depths - depth)
+                    if res > moveSet[1]:
+                        moveSet = ((i,j,rev,dou),res)
+            else:
                 return moveSet
 
                     
@@ -255,11 +285,17 @@ def encrypt(c,e,f):
 def evaluate(corners,edges,faces):
     global faceTurns
     global indTurns
+    global revTurns
     global edgeIncr
     global edgeOriIncr
     global cornerIncr
+    global cornerIncrF
+    global edgeIncrF
     global depths
+    global lv
+    global lvag
     sim = 0
+    edgeTotCount = 0
     if(nu > 2):
         j = resFace
         bitLen = math.ceil(math.log2((nu-2)*(nu-2)*6))
@@ -272,58 +308,69 @@ def evaluate(corners,edges,faces):
             faces >>= bitLen
             j >>= bitLen
         if faceCounter == 6:
-            edgeOriIncr = 10
-            indTurns = [0,nu-1]
-        else:
-            indTurns = list(range(nu))
-            edgeIncr = 0
-            cornerIncr = 0
+            edgeIncr = 10
             depths = 3
+            indTurns = [0,nu-1]
         j = resEdge
         bitLen = math.ceil(math.log2((nu-2)*12)) + 1
         bitMask = int(math.pow(2,bitLen)-1)
         oriBM = 0b1
         edgeCount = 0
-        edgeTotCount = 0
-        for i in range((nu-2)*12):
-            if(edges & bitMask == j & bitMask):
-                sim += edgeIncr
+        for i in lv:
+            bitMask = int(math.pow(2,bitLen)-2)
+            oriBM = 0b1
+            bitMask <<= bitLen * i
+            oriBM <<= bitLen * i
+            if (((edges & bitMask) >> (bitLen * i + 1)) in lv) and (edges & oriBM) == 0:
+                sim += edgeIncr*10
                 edgeTotCount += 1
-            if(edges & oriBM == j & oriBM):
-                sim += edgeOriIncr
-                edgeCount += 1
-            edges >>= bitLen
-            j >>= bitLen
-        if edgeCount == 12:
-            faceTurns = [0,2]
-            indTurns = [0,nu-1]
-            
-            depths = 5
-            edgeIncr = 10
-            if edgeTotCount == 12:
-                cornerIncr = 100
+            if (edges & bitMask == j & bitMask) and (edges & oriBM == j & oriBM):
+                sim += edgeIncrF
+        for i in lvag:
+            bitMask = int(math.pow(2,bitLen)-2)
+            oriBM = 0b1
+            bitMask <<= bitLen * i
+            oriBM <<= bitLen * i
+            if (((edges & bitMask) >> (bitLen * i + 1)) in lvag) and (edges & oriBM) == 0:
+                sim += edgeIncr*5
+                edgeTotCount += 1
             else:
-                cornerIncr = 0
-        else:
-            depths = 3
-            faceTurns = [0,1,2]
-            cornerIncr = 0
-    else:
-        cornerIncr = 1
+                sim -= edgeIncr
+            if (edges & bitMask == j & bitMask) and (edges & oriBM == j & oriBM):
+                sim += edgeIncrF
+    if edgeTotCount == 12:
+        indTurns = [0,nu-1]
+        revTurns = [1,-1]
+        cornerIncr = 1000
+        depths = 3
     bitMask = 0b11111
     j = resCorner
+    cornerCount = 0
+    corOriBM = 0b11
     for i in range(8):
         if(corners & bitMask == j & bitMask):
+            sim += cornerIncrF
+        if( corners & corOriBM == 0):
             sim += cornerIncr
+            cornerCount += 1
         corners >>= 5
         j >>= 5
+    if cornerCount == 8 and edgeTotCount == 12:
+        revTurns = [2]
+        indTurns = [0,nu-1]
+        faceTurns = [0,1,2]
+        depths = 5
+        cornerIncrF = 1000
+        edgeIncrF = 1000
+        lv = [8,11,0,3,4,5,6,7,1,2,9,10]
     # ans = max(ans,sim)
             # print(orInd)
     return sim * 100
 
-# def evaluateTwo(corners,edges,faces):
+# def evaluate(corners,edges,faces):
 #     global faceTurns
 #     global indTurns
+#     global revTurns
 #     global edgeIncr
 #     global edgeOriIncr
 #     global cornerIncr
@@ -355,9 +402,6 @@ def evaluate(corners,edges,faces):
 #         edgeCount = 0
 #         edgeTotCount = 0
 #         for i in range((nu-2)*12):
-#             if(edges & bitMask == j & bitMask):
-#                 sim += edgeIncr
-#                 edgeTotCount += 1
 #             if(edges & oriBM == j & oriBM):
 #                 sim += edgeOriIncr
 #                 edgeCount += 1
@@ -367,26 +411,25 @@ def evaluate(corners,edges,faces):
 #             faceTurns = [0,2]
 #             indTurns = [0,nu-1]
 #             revTurns = [2]
-            
-#             depths = 4
-#             edgeIncr = 10
-#             if edgeTotCount == 12:
-#                 cornerIncr = 100
-#             else:
-#                 cornerIncr = 0
-#         else:
+#             cornerIncr = 1
 #             depths = 3
+#             edgeIncr = 10
+#         else:
 #             faceTurns = [0,1,2]
-#             cornerIncr = 0
-#     else:
-#         cornerIncr = 1
+#             depths = 3
 #     bitMask = 0b11111
+#     corOriBM = 0b11
 #     j = resCorner
+#     corCounter = 0
 #     for i in range(8):
-#         if(corners & bitMask == j & bitMask):
+#         if(corners & corOriBM == j & corOriBM):
 #             sim += cornerIncr
+#             corCounter += 1
 #         corners >>= 5
 #         j >>= 5
+#     if corCounter == 8:
+#         revTurns = [2]
+#         depths = 6
 #     # ans = max(ans,sim)
 #             # print(orInd)
 #     return sim * 100

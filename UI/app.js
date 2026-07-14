@@ -1,4 +1,4 @@
-let n = 3
+let n = 2
 let v = 0
 let animating = false
 let totAngle = 0
@@ -31,6 +31,7 @@ let shuffling = false
 let calibrating = true
 let nextMove = false
 let start = 'start'
+let prevV = -1
 const tex = document.getElementById('text')
 
 async function handleUpload(rep){;
@@ -313,7 +314,7 @@ function animate(v,num,dou){
                 e.i = Math.round(Math.abs(e.x/e.len + (n-1)/2))
                 e.k = Math.round(Math.abs(e.z/e.len + (n-1)/2))
 
-                if (dou == false && (e.typ == 1 && ((num > 0 && num < n-1) || v == 1))){
+                if (dou == false && (e.typ == 1 && ((num > 0 && num < n-1) || v == 2))){
                     if(e.ori == 0)e.ori = 1
                     else if(e.ori == 1)e.ori = 0
                 }
@@ -337,14 +338,16 @@ function draw(){
     else{
         if(shuffling){
             if(shuffleCounter > 0){
-                v = Math.round(random()*2)
-                ActualKey = Math.random()
-                const items = [0,n-1,1];
-                ActualKey = items[Math.floor(Math.random() * items.length)];   
+                let vitems = [0,1,2];
+                let items = [0,1];
+                if (vitems.includes(prevV))vitems.splice(vitems.indexOf(prevV),1)
+                ActualKey = items[Math.floor(Math.random() * items.length)]; 
+                v =  vitems[Math.floor(Math.random() * vitems.length)]; 
                 let vlu = random() - 0.5
                 reverse = vlu/Math.abs(vlu)
                 dou = random() < 0.5
                 fc = frameCount
+                prevV = v
                 if(continuing)animating = true;
                 shuffleCounter -= 1
                 
